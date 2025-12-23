@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Lauti a BR</title>
+
+<style>
+body {
+    margin: 0;
+    background: #000;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    background: #000;
+}
+
+#subtitles {
+    position: fixed;
+    bottom: 40px;
+    width: 100%;
+    text-align: center;
+    font-size: 28px;
+    color: #fff;
+    text-shadow: 2px 2px 8px #000;
+    padding: 0 40px;
+}
+
+#btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    padding: 10px 18px;
+    font-size: 16px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<button id="btn">🎙️ Iniciar</button>
+
+<video id="cam" autoplay muted playsinline></video>
+<div id="subtitles"></div>
+
+<script>
+// ---------- CÁMARA + MIC ----------
+async function startCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+    });
+    document.getElementById("cam").srcObject = stream;
+}
+
+// ---------- SPEECH ----------
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const rec = new SpeechRecognition();
+
+rec.lang = "es-AR";
+rec.continuous = true;
+rec.interimResults = false;
+
+let listening = false;
+
+rec.onresult = e => {
+    const text = e.results[e.results.length - 1][0].transcript.trim();
+    translate(text);
+};
+
+rec.onend = () => {
+    if (listening) rec.start();
+};
+
+// ---------- GOOGLE TRANSLATE ----------
+async function translate(text) {
+    const url =
+        "https://translate.googleapis.com/translate_a/single" +
+        "?client=gtx" +
+        "&sl=es" +
+        "&tl=pt" +
+        "&dt=t" +
+        "&q=" + encodeURIComponent(text);
+
+    try {
+        const r = await fetch(url);
+        const d = await r.json();
+
+        let translated = "";
+        d[0].forEach(t => translated += t[0]);
+
+        document.getElementById("subtitles").innerText = translated;
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ---------- BOTÓN ----------
+document.getElementById("btn").onclick = async () => {
+    if (!listening) {
+        await startCamera();     // pide cámara + mic
+        rec.start();             // pide mic (speech)
+        listening = true;
+        btn.innerText = "⏹️ Detener";
+    } else {
+        rec.stop();
+        listening = false;
+        btn.innerText = "🎙️ Iniciar";
+    }
+};
+</script>
+
+</body>
+</html>
